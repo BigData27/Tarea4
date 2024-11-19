@@ -86,3 +86,78 @@ db.games.insertMany([
     price_final: 39.99
   }
 ])
+
+//Actualización del valor de un video juego en la colección games:
+db.games.updateOne(
+  { title: "Adventure Quest" },  // filtro para seleccionar el nombre del juego
+  { $set: { price_final: 69.00 } }  // operación para actualizar campo en el documento 
+)
+
+//Eliminar varios documentos de la colección games usando deleteMany()
+db.games.deleteMany({ rating: "Negative" }) // eliminamos los documentos donde el rating sea "Negative"
+
+//Unir dos colecciones, data y games por medio del campo app_id:
+db.data.aggregate([
+   {
+     $lookup: { // el operador $lookup funciona como un join
+       from: "games",
+       localField: "app_id",
+       foreignField: "app_id",
+       as: "game_info" 
+     }
+   }
+])
+
+//Consulta de los juegos disponibles en Steam DEck con su descripción y título:
+db.data.aggregate([
+   {
+     $lookup: { // el operador $lookup funciona como un join
+       from: "games", 
+       localField: "app_id", // app_id de la colección data
+       foreignField: "app_id", // app_id de la colección games
+       as: "game_info" // array de documentos
+     }
+   },
+   {
+     $unwind: "$game_info" // descompone el array
+   },
+   {
+     $match: {
+       "game_info.steam_deck": true // filtra los documentos donde steam_deck sea true
+     }
+   },
+   {
+     $project: {
+       "description": 1, // muestra la descripción
+       "game_info.title": 1 // muestra el título
+     }
+   }
+])
+
+//Mostrar juegos con algún descuento y su respectiva descripción:
+db.data.aggregate([
+   {
+     $lookup: { // el operador $lookup funciona como un join
+       from: "games",
+       localField: "app_id", // app_id de la colección data
+       foreignField: "app_id", // app_id de la colección games
+       as: "game_info" // array de documentos
+     }
+   },
+   {
+     $unwind: "$game_info" // descompone el array
+   },
+   {
+     $match: {
+       "game_info.discount": { $gt: 0 } // filtro descuento
+     }
+   },
+   {
+     $project: {
+       "description": 1, // muestra la descripción
+       "game_info.title": 1, // muestra el título
+       "game_info.discount": 1, // muestra el descuento
+       "game_info.price_final": 1 // muestra el precio final
+     }
+   }
+])
